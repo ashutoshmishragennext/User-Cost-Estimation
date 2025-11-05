@@ -20,3 +20,5 @@ export async function currentRole() {
     console.error("Error fetching current role:", err);
   }
 }
+
+export { auth };

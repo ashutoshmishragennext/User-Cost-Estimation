@@ -28,6 +28,7 @@ export const UserRole = pgEnum("user_role", [
 
 export const TicketStatusEnum = pgEnum('ticket_status', ['open', 'pending', 'resolved', 'closed']);
 export const MessageDirectionEnum = pgEnum('message_direction', ['user_to_admin', 'admin_to_user']);
+export const TaskStatusEnum = pgEnum('task_status', ['pending', 'approved', 'rejected']);
 
 // =====================
 // Ticket Tables
@@ -103,71 +104,76 @@ export const UserTable = pgTable(
   })
 );
 
-export const Tickets = pgTable('support_tickets', {
+
+// export const UserRelations = relations(UserTable, ({ many }) => ({
+//   createdTickets: many(Tickets, { relationName: 'user_tickets' }),
+//   assignedTickets: many(Tickets, { relationName: 'assigned_admin' }),
+//   sentMessages: many(TicketMessages),
+// }));
+
+export const Projects = pgTable('projects', {
   id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id').notNull().references(() => UserTable.id),
-  ticketNumber: varchar('ticket_number', { length: 20 }).unique().notNull(),
-  subject: varchar('subject', { length: 255 }).notNull(),
-  description: text('description').notNull(),
-  attachment: text('image').array(),
-  category: varchar('category', { length: 100 }),
-  priority: varchar('priority', { length: 20 }).default('medium'),
-  status: TicketStatusEnum('status').default('open'),
-  assignedTo: uuid('assigned_to').references(() => UserTable.id),
-  resolutionNotes: text('resolution_notes'),
-  resolvedAt: timestamp('resolved_at'),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
+  projectName: varchar('project_name', { length: 255 }).notNull(),
+  description: text('description'),
+  createdBy: uuid('created_by').notNull().references(() => UserTable.id),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => ({
-  userIdx: index('ticket_user_idx').on(table.userId),
-  assignedToIdx: index('ticket_assigned_to_idx').on(table.assignedTo),
-  statusIdx: index('ticket_status_idx').on(table.status),
+  createdByIdx: index('project_created_by_idx').on(table.createdBy),
+  projectNameIdx: index('project_name_idx').on(table.projectName),
 }));
 
-export const TicketMessages = pgTable('ticket_messages', {
+export const Tasks = pgTable('tasks', {
   id: uuid('id').primaryKey().defaultRandom(),
-  ticketId: uuid('ticket_id').notNull().references(() => Tickets.id),
-  senderId: uuid('sender_id').notNull().references(() => UserTable.id),
-  direction: MessageDirectionEnum('direction').notNull(), // Who sent the message
-  message: text('message').notNull(),
-  attachments: jsonb('attachments'), // Array of attachment URLs
-  isRead: boolean('is_read').default(false),
-  createdAt: timestamp('created_at').defaultNow(),
+  projectId: uuid('project_id').notNull().references(() => Projects.id, { onDelete: 'cascade' }),
+  employeeId: uuid('employee_id').notNull().references(() => UserTable.id),
+  taskName: varchar('task_name', { length: 255 }).notNull(),
+  description: text('description'),
+  expectedHours: decimal('expected_hours', { precision: 10, scale: 2 }).notNull(),
+  actualHours: decimal('actual_hours', { precision: 10, scale: 2 }).notNull(),
+  status: TaskStatusEnum('status').default('pending').notNull(),
+  approvedBy: uuid('approved_by').references(() => UserTable.id),
+  approvedAt: timestamp('approved_at'),
+  rejectionReason: text('rejection_reason'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => ({
-  ticketIdx: index('message_ticket_idx').on(table.ticketId),
-  senderIdx: index('message_sender_idx').on(table.senderId),
+  projectIdx: index('task_project_idx').on(table.projectId),
+  employeeIdx: index('task_employee_idx').on(table.employeeId),
+  statusIdx: index('task_status_idx').on(table.status),
+  approvedByIdx: index('task_approved_by_idx').on(table.approvedBy),
 }));
 
-// =====================
-// Relations
-// =====================
 
-export const TicketRelations = relations(Tickets, ({ one, many }) => ({
-  user: one(UserTable, {
-    fields: [Tickets.userId],
+export const ProjectRelations = relations(Projects, ({ one, many }) => ({
+  creator: one(UserTable, {
+    fields: [Projects.createdBy],
     references: [UserTable.id],
   }),
-  assignedAdmin: one(UserTable, {
-    fields: [Tickets.assignedTo],
-    references: [UserTable.id],
-    relationName: 'assigned_admin'
-  }),
-  messages: many(TicketMessages),
+  tasks: many(Tasks),
 }));
 
-export const TicketMessageRelations = relations(TicketMessages, ({ one }) => ({
-  ticket: one(Tickets, {
-    fields: [TicketMessages.ticketId],
-    references: [Tickets.id],
+export const TaskRelations = relations(Tasks, ({ one }) => ({
+  project: one(Projects, {
+    fields: [Tasks.projectId],
+    references: [Projects.id],
   }),
-  sender: one(UserTable, {
-    fields: [TicketMessages.senderId],
+  employee: one(UserTable, {
+    fields: [Tasks.employeeId],
     references: [UserTable.id],
+    relationName: 'employee_tasks',
+  }),
+  approver: one(UserTable, {
+    fields: [Tasks.approvedBy],
+    references: [UserTable.id],
+    relationName: 'approved_tasks',
   }),
 }));
 
+// Update UserRelations to include projects and tasks
 export const UserRelations = relations(UserTable, ({ many }) => ({
-  createdTickets: many(Tickets, { relationName: 'user_tickets' }),
-  assignedTickets: many(Tickets, { relationName: 'assigned_admin' }),
-  sentMessages: many(TicketMessages),
+  createdProjects: many(Projects),
+  employeeTasks: many(Tasks, { relationName: 'employee_tasks' }),
+  approvedTasks: many(Tasks, { relationName: 'approved_tasks' }),
 }));
