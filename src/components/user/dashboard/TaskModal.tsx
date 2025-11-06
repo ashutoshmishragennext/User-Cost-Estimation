@@ -47,8 +47,8 @@ export const TaskModal: React.FC<{
 
     if (formData.description.length > 1000) newErrors.description = 'Description must be less than 1000 characters';
 
-    const expectedHours = parseFloat(formData.expectedHours);
-    if (!formData.expectedHours || isNaN(expectedHours) || expectedHours <= 0) newErrors.expectedHours = 'Expected hours must be greater than 0';
+    // const expectedHours = parseFloat(formData.expectedHours);
+    // if (!formData.expectedHours || isNaN(expectedHours) || expectedHours <= 0) newErrors.expectedHours = 'Expected hours must be greater than 0';
 
     const actualHours = parseFloat(formData.actualHours);
     if (!formData.actualHours || isNaN(actualHours) || actualHours <= 0) newErrors.actualHours = 'Actual hours must be greater than 0';
@@ -76,7 +76,7 @@ export const TaskModal: React.FC<{
           projectId,
           taskName: formData.taskName.trim(),
           description: formData.description.trim() || null,
-          expectedHours: parseFloat(formData.expectedHours),
+          // expectedHours: parseFloat(formData.expectedHours),
           actualHours: parseFloat(formData.actualHours),
         }),
       });
@@ -146,7 +146,7 @@ export const TaskModal: React.FC<{
             {errors.description && <p className="text-red-600 text-sm mt-1">{errors.description}</p>}
           </div>
 
-          <div>
+          {/* <div>
             <label htmlFor="expectedHours" className="block mb-1 font-medium text-gray-700">
               Expected Hours <span className="text-red-600">*</span>
             </label>
@@ -164,7 +164,7 @@ export const TaskModal: React.FC<{
               placeholder="Enter expected hours"
             />
             {errors.expectedHours && <p className="text-red-600 text-sm mt-1">{errors.expectedHours}</p>}
-          </div>
+          </div> */}
 
           <div>
             <label htmlFor="actualHours" className="block mb-1 font-medium text-gray-700">

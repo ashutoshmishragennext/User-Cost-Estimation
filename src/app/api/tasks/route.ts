@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     const { projectId, taskName, description, expectedHours, actualHours } = body;
 
     // Basic validation
-    if (!projectId || !taskName || expectedHours == null || actualHours == null) {
+    if (!projectId || !taskName ||  actualHours == null) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
       employeeId: session.user.id!, // assigning task to logged-in user
       taskName,
       description: description || null,
-      expectedHours,
+      expectedHours: expectedHours || null,
       actualHours,
       status: 'pending',
       createdAt: new Date(),

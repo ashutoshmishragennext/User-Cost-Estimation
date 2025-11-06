@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, ChevronRight, Calendar, X, Loader2, CheckCircle2, Clock, Edit2, Trash2, TrendingUp, TrendingDown } from 'lucide-react';
+import { Plus, Loader2 } from 'lucide-react';
 import { downloadCSV, formatProjectDetailsForExport, formatProjectsForExport } from '@/utils/exportUtils';
 import DownloadButton from '@/components/DownloadButton';
 import SearchBox from '@/components/SearchBox';

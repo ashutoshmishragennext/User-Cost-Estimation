@@ -154,12 +154,7 @@ export const ProjectTasksView: React.FC<{
           <p className="text-sm text-gray-500 mb-1">My Tasks</p>
           <p className="text-3xl font-bold text-gray-900">{myTasks.length}</p>
         </div>
-        <div className="bg-white p-6 rounded-lg border border-gray-200">
-          <p className="text-sm text-gray-500 mb-1">Expected Hours</p>
-          <p className="text-3xl font-bold text-blue-600">
-            {myTasks.reduce((sum, t) => sum + parseFloat(t.expectedHours), 0).toFixed(1)}
-          </p>
-        </div>
+       
         <div className="bg-white p-6 rounded-lg border border-gray-200">
           <p className="text-sm text-gray-500 mb-1">Actual Hours</p>
           <p className="text-3xl font-bold text-purple-600">
@@ -179,7 +174,7 @@ export const ProjectTasksView: React.FC<{
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Employee</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Task</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Description</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Expected</th>
+                {/* <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Expected</th> */}
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Actual</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
@@ -200,9 +195,9 @@ export const ProjectTasksView: React.FC<{
                   <td className="px-6 py-4 max-w-md">
                     <p className="text-sm text-gray-700">{task.description || 'No description'}</p>
                   </td>
-                  <td className="px-6 py-4 font-semibold text-gray-900">
+                  {/* <td className="px-6 py-4 font-semibold text-gray-900">
                     {parseFloat(task.expectedHours).toFixed(1)}h
-                  </td>
+                  </td> */}
                   <td className="px-6 py-4 font-semibold text-gray-900">
                     {parseFloat(task.actualHours).toFixed(1)}h
                   </td>

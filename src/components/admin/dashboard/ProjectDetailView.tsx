@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { CheckCircle2, Clock, Edit2, Loader2, TrendingDown, TrendingUp, X } from "lucide-react";
 import DownloadButton from '@/components/DownloadButton';
 import SearchBox from '@/components/SearchBox';
+import Navigation from "@/components/pages/Navbar";
 
 
 // ==================== TYPES ====================
@@ -66,7 +67,8 @@ export const ProjectDetailView: React.FC<{
 
 const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
 const [editedTaskName, setEditedTaskName] = useState('');
-const [editedActualHours, setEditedActualHours] = useState('');
+// const [editedActualHours, setEditedActualHours] = useState('');
+const [editedExpectedHours, setEditedExpectedHours] = useState('');
 const [editedStatus, setEditedStatus] = useState<'pending' | 'approved' | 'rejected'>('pending');
 
 const [isSaving, setIsSaving] = useState(false);
@@ -105,54 +107,37 @@ const [isSaving, setIsSaving] = useState(false);
       setFilteredEmployees(employees);
     }
   }, [employeeSearchTerm, employees]);
-const handleEditClick = (task: Task) => {
-  setEditingTaskId(task.taskId);
-  setEditedTaskName(task.taskName);
-  setEditedActualHours(task.actualHours);
-};
 
-const handleCancelEdit = () => {
-  setEditingTaskId(null);
-  setEditedTaskName('');
-  setEditedActualHours('');
-};
+    const handleEditClick = (task: Task) => {
+      setEditingTaskId(task.taskId);
+      setEditedTaskName(task.taskName);
+      // setEditedActualHours(task.actualHours);
+      setEditedExpectedHours(task.expectedHours);
+      setEditedStatus(task.status); // Add this line
+    };
 
-// const handleSaveEdit = async (taskId: string) => {
-//   setIsSaving(true);
-//   try {
-//     const response = await fetch(`/api/tasks/${taskId}`, {
-//       method: 'PUT',
-//       headers: { 'Content-Type': 'application/json' },
-//       body: JSON.stringify({
-//         taskName: editedTaskName.trim(),
-//         actualHours: parseFloat(editedActualHours),
-//       }),
-//     });
+    const handleCancelEdit = () => {
+      setEditingTaskId(null);
+      setEditedTaskName('');
+      // setEditedActualHours('');
+      setEditedExpectedHours('');
+    };
 
-//     if (!response.ok) {
-//       const data = await response.json();
-//       throw new Error(data.error || 'Failed to update task');
-//     }
+    const handleSaveEdit = async (taskId: string) => {
+      if (!editedTaskName.trim()) {
+        alert('Task name cannot be empty');
+        return;
+      }
 
-//     // Refresh the project details after successful update
-//     window.location.reload();
-//   } catch (error) {
-//     console.error('Error updating task:', error);
-//     alert(error instanceof Error ? error.message : 'Failed to update task');
-//   } finally {
-//     setIsSaving(false);
-//   }
-// };
-const handleSaveEdit = async (taskId: string) => {
-  // Validate inputs
-  if (!editedTaskName.trim()) {
-    alert('Task name cannot be empty');
-    return;
-  }
+  // const actualHoursNum = parseFloat(editedActualHours);
+  // if (isNaN(actualHoursNum) || actualHoursNum < 0) {
+  //   alert('Actual hours must be a valid positive number');
+  //   return;
+  // }
 
-  const actualHoursNum = parseFloat(editedActualHours);
-  if (isNaN(actualHoursNum) || actualHoursNum < 0) {
-    alert('Actual hours must be a valid positive number');
+  const expectedHoursNum = parseFloat(editedExpectedHours);
+  if (isNaN(expectedHoursNum) || expectedHoursNum < 0) {
+    alert('Expected hours must be a valid positive number');
     return;
   }
 
@@ -163,8 +148,9 @@ const handleSaveEdit = async (taskId: string) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         taskName: editedTaskName.trim(),
-        actualHours: actualHoursNum,
-        
+        // actualHours: actualHoursNum,
+        expectedHours: expectedHoursNum,
+        status: editedStatus, // Add this line
       }),
     });
 
@@ -173,15 +159,14 @@ const handleSaveEdit = async (taskId: string) => {
       throw new Error(data.error || 'Failed to update task');
     }
 
-    // Reset editing state
     setEditingTaskId(null);
     setEditedTaskName('');
-    setEditedActualHours('');
+    // setEditedActualHours('');
+    setEditedExpectedHours('');
+    setEditedStatus('pending'); // Add this line
 
-    // Refresh project details by refetching
-    // if (selectedProjectId) {
-    //   await fetchProjectDetails(selectedProjectId);
-    // }
+    // Refresh the page or refetch data
+    window.location.reload();
   } catch (error) {
     console.error('Error updating task:', error);
     alert(error instanceof Error ? error.message : 'Failed to update task');
@@ -218,7 +203,9 @@ const varianceNum = parseFloat(summary.variance);
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      {/* <Navigation/> */}
+      <div className="space-y-6">
       {/* Header */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <button
@@ -349,7 +336,8 @@ const varianceNum = parseFloat(summary.variance);
 
               </tr>
             </thead>
-            {/* <tbody className="divide-y divide-gray-200">
+
+            <tbody className="divide-y divide-gray-200">
               {filteredTasks.map((task) => (
                 <tr key={task.taskId} className="hover:bg-gray-50">
                   <td className="px-6 py-4">
@@ -359,23 +347,65 @@ const varianceNum = parseFloat(summary.variance);
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="font-medium text-gray-900">{task.taskName}</p>
+                    {editingTaskId === task.taskId ? (
+                      <input
+                        type="text"
+                        value={editedTaskName}
+                        onChange={(e) => setEditedTaskName(e.target.value)}
+                        className="w-full px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        disabled={isSaving}
+                      />
+                    ) : (
+                      <p className="font-medium text-gray-900">{task.taskName}</p>
+                    )}
                   </td>
                   <td className="px-6 py-4 max-w-md">
                     <p className="text-sm text-gray-700">{task.description || 'No description'}</p>
                   </td>
-                  <td className="px-6 py-4 font-semibold text-gray-900">
+                  {/* <td className="px-6 py-4 font-semibold text-gray-900">
                     {parseFloat(task.expectedHours).toFixed(1)}h
+                  </td> */}
+                  <td className="px-6 py-4">
+                    {editingTaskId === task.taskId ? (
+                      <input
+                        type="number"
+                        step="0.5"
+                        min="0"
+                        value={editedExpectedHours}
+                        onChange={(e) => setEditedExpectedHours(e.target.value)}
+                        className="w-24 px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        disabled={isSaving}
+                      />
+                    ) : (
+                      <span className="font-semibold text-gray-900">
+                        {parseFloat(task.expectedHours).toFixed(1)}h
+                      </span>
+                    )}
                   </td>
+                
                   <td className="px-6 py-4 font-semibold text-gray-900">
                     {parseFloat(task.actualHours).toFixed(1)}h
                   </td>
+               
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
-                      {getStatusIcon(task.status)}
-                      {task.status}
-                    </span>
-                  </td>
+                {editingTaskId === task.taskId ? (
+                  <select
+                    value={editedStatus}
+                    onChange={(e) => setEditedStatus(e.target.value as 'pending' | 'approved' | 'rejected')}
+                    className="px-3 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    disabled={isSaving}
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                ) : (
+                  <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
+                    {getStatusIcon(task.status)}
+                    {task.status}
+                  </span>
+                )}
+                </td>
                   <td className="px-6 py-4 text-sm text-gray-600">
                     {new Date(task.createdAt).toLocaleDateString('en-IN', {
                       day: '2-digit',
@@ -383,103 +413,43 @@ const varianceNum = parseFloat(summary.variance);
                       year: 'numeric'
                     })}
                   </td>
+                  <td className="px-6 py-4">
+                    {editingTaskId === task.taskId ? (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleSaveEdit(task.taskId)}
+                          disabled={isSaving}
+                          className="text-green-600 hover:text-green-700 font-medium disabled:opacity-50 flex items-center gap-1"
+                        >
+                          {isSaving ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="w-4 h-4" />
+                          )}
+                          Confirm
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          disabled={isSaving}
+                          className="text-gray-600 hover:text-gray-700 font-medium disabled:opacity-50"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleEditClick(task)}
+                        className="text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                        Edit
+                      </button>
+                    )}
+                  </td>
+                  
                 </tr>
               ))}
-            </tbody> */}
-        <tbody className="divide-y divide-gray-200">
-  {filteredTasks.map((task) => (
-    <tr key={task.taskId} className="hover:bg-gray-50">
-      <td className="px-6 py-4">
-        <div>
-          <p className="font-medium text-gray-900">{task.employeeName}</p>
-          <p className="text-sm text-gray-500">{task.employeeEmail}</p>
-        </div>
-      </td>
-      <td className="px-6 py-4">
-        {editingTaskId === task.taskId ? (
-          <input
-            type="text"
-            value={editedTaskName}
-            onChange={(e) => setEditedTaskName(e.target.value)}
-            className="w-full px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            disabled={isSaving}
-          />
-        ) : (
-          <p className="font-medium text-gray-900">{task.taskName}</p>
-        )}
-      </td>
-      <td className="px-6 py-4 max-w-md">
-        <p className="text-sm text-gray-700">{task.description || 'No description'}</p>
-      </td>
-      <td className="px-6 py-4 font-semibold text-gray-900">
-        {parseFloat(task.expectedHours).toFixed(1)}h
-      </td>
-      <td className="px-6 py-4">
-        {editingTaskId === task.taskId ? (
-          <input
-            type="number"
-            step="0.5"
-            min="0"
-            value={editedActualHours}
-            onChange={(e) => setEditedActualHours(e.target.value)}
-            className="w-24 px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            disabled={isSaving}
-          />
-        ) : (
-          <span className="font-semibold text-gray-900">
-            {parseFloat(task.actualHours).toFixed(1)}h
-          </span>
-        )}
-      </td>
-      <td className="px-6 py-4">
-        <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
-          {getStatusIcon(task.status)}
-          {task.status}
-        </span>
-      </td>
-      <td className="px-6 py-4 text-sm text-gray-600">
-        {new Date(task.createdAt).toLocaleDateString('en-IN', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric'
-        })}
-      </td>
-      <td className="px-6 py-4">
-        {editingTaskId === task.taskId ? (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => handleSaveEdit(task.taskId)}
-              disabled={isSaving}
-              className="text-green-600 hover:text-green-700 font-medium disabled:opacity-50 flex items-center gap-1"
-            >
-              {isSaving ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <CheckCircle2 className="w-4 h-4" />
-              )}
-              Confirm
-            </button>
-            <button
-              onClick={handleCancelEdit}
-              disabled={isSaving}
-              className="text-gray-600 hover:text-gray-700 font-medium disabled:opacity-50"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => handleEditClick(task)}
-            className="text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
-          >
-            <Edit2 className="w-4 h-4" />
-            Edit
-          </button>
-        )}
-      </td>
-    </tr>
-  ))}
-</tbody>
+            </tbody>
           </table>
           {tasks.length === 0 && (
             <div className="text-center py-12">
@@ -489,5 +459,6 @@ const varianceNum = parseFloat(summary.variance);
         </div>
       </div>
     </div>
+    </>
   );
 };

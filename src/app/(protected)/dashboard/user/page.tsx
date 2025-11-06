@@ -103,7 +103,7 @@ export default function UserDashboard() {
     const fetchProjectDetails = async (projectId: string) => {
     setIsLoadingDetails(true);
     try {
-      const response = await fetch(`/api/projects/${projectId}`);
+      const response = await fetch(`/api/tasks/${projectId}`);
       const data = await response.json();
 
       if (!response.ok) {
