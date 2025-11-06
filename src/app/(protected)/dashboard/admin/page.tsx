@@ -2,6 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { Plus, ChevronRight, Calendar, X, Loader2, CheckCircle2, Clock, Edit2, Trash2, TrendingUp, TrendingDown } from 'lucide-react';
+import { downloadCSV, formatProjectDetailsForExport, formatProjectsForExport } from '@/utils/exportUtils';
+import DownloadButton from '@/components/DownloadButton';
+import SearchBox from '@/components/SearchBox';
 
 // ==================== TYPES ====================
 interface Project {
@@ -98,7 +101,7 @@ const AddProjectModal: React.FC<{
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     setIsSubmitting(true);
@@ -143,6 +146,7 @@ const AddProjectModal: React.FC<{
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      navbar
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
         <div className="flex justify-between items-center p-6 border-b border-gray-200">
           <h3 className="text-xl font-bold text-gray-900">Add New Project</h3>
@@ -166,9 +170,8 @@ const AddProjectModal: React.FC<{
               value={formData.projectName}
               onChange={(e) => handleChange('projectName', e.target.value)}
               disabled={isSubmitting}
-              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                errors.projectName ? 'border-red-500' : 'border-gray-300'
-              } ${isSubmitting ? 'bg-gray-50 cursor-not-allowed' : ''}`}
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${errors.projectName ? 'border-red-500' : 'border-gray-300'
+                } ${isSubmitting ? 'bg-gray-50 cursor-not-allowed' : ''}`}
               placeholder="Enter project name"
             />
             {errors.projectName && (
@@ -186,9 +189,8 @@ const AddProjectModal: React.FC<{
               onChange={(e) => handleChange('description', e.target.value)}
               disabled={isSubmitting}
               rows={4}
-              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none ${
-                errors.description ? 'border-red-500' : 'border-gray-300'
-              } ${isSubmitting ? 'bg-gray-50 cursor-not-allowed' : ''}`}
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none ${errors.description ? 'border-red-500' : 'border-gray-300'
+                } ${isSubmitting ? 'bg-gray-50 cursor-not-allowed' : ''}`}
               placeholder="Enter project description (optional)"
             />
             {errors.description && (
@@ -329,11 +331,91 @@ const ProjectDetailView: React.FC<{
   projectDetails: ProjectDetails;
   onBack: () => void;
   isLoading: boolean;
-}> = ({ projectDetails, onBack, isLoading }) => {
+  onExport?: () => void; // Add this
+  isExporting?: boolean; // Add this
+}> = ({ projectDetails, onBack, isLoading, onExport, isExporting }) => {
   const { project, tasks, summary, employees } = projectDetails;
+
+
+const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+const [editedTaskName, setEditedTaskName] = useState('');
+const [editedActualHours, setEditedActualHours] = useState('');
+const [isSaving, setIsSaving] = useState(false);
+
+  // Add search states
+  const [taskSearchTerm, setTaskSearchTerm] = useState('');
+  const [filteredTasks, setFilteredTasks] = useState<Task[]>(tasks);
+  const [employeeSearchTerm, setEmployeeSearchTerm] = useState('');
+  const [filteredEmployees, setFilteredEmployees] = useState<EmployeeSummary[]>(employees);
+
+  // Filter tasks based on search
+  useEffect(() => {
+    if (taskSearchTerm) {
+      const filtered = tasks.filter(task =>
+        task.taskName.toLowerCase().includes(taskSearchTerm.toLowerCase()) ||
+        task.employeeName.toLowerCase().includes(taskSearchTerm.toLowerCase()) ||
+        task.employeeEmail.toLowerCase().includes(taskSearchTerm.toLowerCase()) ||
+        (task.description && task.description.toLowerCase().includes(taskSearchTerm.toLowerCase())) ||
+        task.status.toLowerCase().includes(taskSearchTerm.toLowerCase())
+      );
+      setFilteredTasks(filtered);
+    } else {
+      setFilteredTasks(tasks);
+    }
+  }, [taskSearchTerm, tasks]);
+
+  // Filter employees based on search
+  useEffect(() => {
+    if (employeeSearchTerm) {
+      const filtered = employees.filter(employee =>
+        employee.employeeName.toLowerCase().includes(employeeSearchTerm.toLowerCase()) ||
+        employee.employeeEmail.toLowerCase().includes(employeeSearchTerm.toLowerCase())
+      );
+      setFilteredEmployees(filtered);
+    } else {
+      setFilteredEmployees(employees);
+    }
+  }, [employeeSearchTerm, employees]);
+const handleEditClick = (task: Task) => {
+  setEditingTaskId(task.taskId);
+  setEditedTaskName(task.taskName);
+  setEditedActualHours(task.actualHours);
+};
+
+const handleCancelEdit = () => {
+  setEditingTaskId(null);
+  setEditedTaskName('');
+  setEditedActualHours('');
+};
+
+const handleSaveEdit = async (taskId: string) => {
+  setIsSaving(true);
+  try {
+    const response = await fetch(`/api/tasks/${taskId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        taskName: editedTaskName.trim(),
+        actualHours: parseFloat(editedActualHours),
+      }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || 'Failed to update task');
+    }
+
+    // Refresh the project details after successful update
+    window.location.reload();
+  } catch (error) {
+    console.error('Error updating task:', error);
+    alert(error instanceof Error ? error.message : 'Failed to update task');
+  } finally {
+    setIsSaving(false);
+  }
+};
   const varianceNum = parseFloat(summary.variance);
   const isOverBudget = varianceNum > 0;
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'approved': return 'bg-green-100 text-green-700';
@@ -370,6 +452,26 @@ const ProjectDetailView: React.FC<{
         >
           ← Back to Projects
         </button>
+
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+          <div className="flex-1 max-w-md">
+            <SearchBox
+              value={taskSearchTerm}
+              onChange={setTaskSearchTerm}
+              placeholder="Search tasks, employees, or status..."
+              className="w-full"
+            />
+          </div>
+          <DownloadButton
+            onDownload={onExport || (() => { })}
+            isLoading={isExporting}
+            disabled={tasks.length === 0}
+            variant="outline"
+          >
+            Export Project Data
+          </DownloadButton>
+        </div>
+
         <div className="flex justify-between items-start">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">{project.projectName}</h2>
@@ -407,7 +509,7 @@ const ProjectDetailView: React.FC<{
       </div>
 
       {/* Employee Summary */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      {/* <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="p-6 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">Employee Summary</h3>
         </div>
@@ -450,7 +552,7 @@ const ProjectDetailView: React.FC<{
             </tbody>
           </table>
         </div>
-      </div>
+      </div> */}
 
       {/* Task Details */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
@@ -468,10 +570,12 @@ const ProjectDetailView: React.FC<{
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Actual</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Actions</th>
+
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
-              {tasks.map((task) => (
+            {/* <tbody className="divide-y divide-gray-200">
+              {filteredTasks.map((task) => (
                 <tr key={task.taskId} className="hover:bg-gray-50">
                   <td className="px-6 py-4">
                     <div>
@@ -506,7 +610,101 @@ const ProjectDetailView: React.FC<{
                   </td>
                 </tr>
               ))}
-            </tbody>
+            </tbody> */}
+        <tbody className="divide-y divide-gray-200">
+  {filteredTasks.map((task) => (
+    <tr key={task.taskId} className="hover:bg-gray-50">
+      <td className="px-6 py-4">
+        <div>
+          <p className="font-medium text-gray-900">{task.employeeName}</p>
+          <p className="text-sm text-gray-500">{task.employeeEmail}</p>
+        </div>
+      </td>
+      <td className="px-6 py-4">
+        {editingTaskId === task.taskId ? (
+          <input
+            type="text"
+            value={editedTaskName}
+            onChange={(e) => setEditedTaskName(e.target.value)}
+            className="w-full px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            disabled={isSaving}
+          />
+        ) : (
+          <p className="font-medium text-gray-900">{task.taskName}</p>
+        )}
+      </td>
+      <td className="px-6 py-4 max-w-md">
+        <p className="text-sm text-gray-700">{task.description || 'No description'}</p>
+      </td>
+      <td className="px-6 py-4 font-semibold text-gray-900">
+        {parseFloat(task.expectedHours).toFixed(1)}h
+      </td>
+      <td className="px-6 py-4">
+        {editingTaskId === task.taskId ? (
+          <input
+            type="number"
+            step="0.5"
+            min="0"
+            value={editedActualHours}
+            onChange={(e) => setEditedActualHours(e.target.value)}
+            className="w-24 px-2 py-1 border border-blue-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            disabled={isSaving}
+          />
+        ) : (
+          <span className="font-semibold text-gray-900">
+            {parseFloat(task.actualHours).toFixed(1)}h
+          </span>
+        )}
+      </td>
+      <td className="px-6 py-4">
+        <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
+          {getStatusIcon(task.status)}
+          {task.status}
+        </span>
+      </td>
+      <td className="px-6 py-4 text-sm text-gray-600">
+        {new Date(task.createdAt).toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric'
+        })}
+      </td>
+      <td className="px-6 py-4">
+        {editingTaskId === task.taskId ? (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleSaveEdit(task.taskId)}
+              disabled={isSaving}
+              className="text-green-600 hover:text-green-700 font-medium disabled:opacity-50 flex items-center gap-1"
+            >
+              {isSaving ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <CheckCircle2 className="w-4 h-4" />
+              )}
+              Confirm
+            </button>
+            <button
+              onClick={handleCancelEdit}
+              disabled={isSaving}
+              className="text-gray-600 hover:text-gray-700 font-medium disabled:opacity-50"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => handleEditClick(task)}
+            className="text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+          >
+            <Edit2 className="w-4 h-4" />
+            Edit
+          </button>
+        )}
+      </td>
+    </tr>
+  ))}
+</tbody>
           </table>
           {tasks.length === 0 && (
             <div className="text-center py-12">
@@ -521,6 +719,9 @@ const ProjectDetailView: React.FC<{
 
 // ==================== MAIN DASHBOARD ====================
 export default function AdminDashboard() {
+  const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);
@@ -537,7 +738,19 @@ export default function AdminDashboard() {
     checkUserRole();
     fetchProjects();
   }, []);
-
+  useEffect(() => {
+    // Filter projects based on search term
+    if (searchTerm) {
+      const filtered = projects.filter(project =>
+        project.projectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (project.description && project.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        project.createdBy.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredProjects(filtered);
+    } else {
+      setFilteredProjects(projects);
+    }
+  }, [searchTerm, projects]);
   const checkUserRole = async () => {
     try {
       const response = await fetch('/api/auth/session');
@@ -590,7 +803,33 @@ export default function AdminDashboard() {
     setSelectedProjectId(project.id);
     fetchProjectDetails(project.id);
   };
+  const handleExportProjects = async () => {
+    setIsExporting(true);
+    try {
+      const dataToExport = formatProjectsForExport(filteredProjects);
+      downloadCSV(dataToExport, 'projects_export');
+    } catch (error) {
+      console.error('Export failed:', error);
+      setError('Failed to export data');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
+  const handleExportProjectDetails = async () => {
+    if (!projectDetails) return;
+
+    setIsExporting(true);
+    try {
+      const dataToExport = formatProjectDetailsForExport(projectDetails);
+      downloadCSV(dataToExport, `project_${projectDetails.project.projectName}_details`);
+    } catch (error) {
+      console.error('Export failed:', error);
+      setError('Failed to export project details');
+    } finally {
+      setIsExporting(false);
+    }
+  };
   const handleBack = () => {
     setSelectedProjectId(null);
     setProjectDetails(null);
@@ -640,6 +879,8 @@ export default function AdminDashboard() {
             projectDetails={projectDetails}
             onBack={handleBack}
             isLoading={isLoadingDetails}
+            onExport={handleExportProjectDetails} // Add this
+            isExporting={isExporting} // Add this
           />
         </div>
       </div>
@@ -668,7 +909,37 @@ export default function AdminDashboard() {
             </button>
           )}
         </div>
-
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="flex-1">
+            <SearchBox
+              value={searchTerm}
+              onChange={setSearchTerm}
+              placeholder="Search projects by name, description, or creator..."
+              className="w-full"
+            />
+          </div>
+          <div className="flex gap-2">
+            {!selectedProjectId ? (
+              <DownloadButton
+                onDownload={handleExportProjects}
+                isLoading={isExporting}
+                disabled={filteredProjects.length === 0}
+                variant="outline"
+              >
+                Export Projects ({filteredProjects.length})
+              </DownloadButton>
+            ) : (
+              <DownloadButton
+                onDownload={handleExportProjectDetails}
+                isLoading={isExporting}
+                disabled={!projectDetails}
+                variant="outline"
+              >
+                Export Project Details
+              </DownloadButton>
+            )}
+          </div>
+        </div>
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
             {error}
@@ -681,7 +952,7 @@ export default function AdminDashboard() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.map((project) => (
+            {filteredProjects.map((project) => (
               <ProjectCard
                 key={project.id}
                 project={project}
