@@ -4,6 +4,9 @@ import React, { useState, useEffect } from 'react';
 import {ProjectCard} from '@/components/user/dashboard/ProjectCard';
 import {ProjectTasksView} from '@/components/user/dashboard/ProjectTaskView';
 import { Loader2 } from 'lucide-react';
+import NavBar from '@/components/common/NavBar';
+import DashboardNavBar from '@/components/common/DashboardNavBar';
+import Navigation from '@/components/pages/Navbar';
 
 // ==================== TYPES ====================
 interface Project {
@@ -146,7 +149,10 @@ export default function UserDashboard() {
     );
   }
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <>
+  
+      <Navigation/>
+      <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">My Projects</h1>
@@ -178,6 +184,7 @@ export default function UserDashboard() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }
