@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {TaskModal} from '@/components/user/dashboard/TaskModal';
 import { Plus, Loader2, CheckCircle2, Clock, X } from "lucide-react";
+import SearchBox from '@/components/SearchBox';
 
 interface Project {
   id: string;
@@ -22,7 +23,6 @@ interface Task {
   employeeId: string;
   employeeName: string;
   employeeEmail: string;
-
 }
 
 interface EmployeeSummary {
@@ -36,7 +36,6 @@ interface EmployeeSummary {
   approvedTasks: number;
   rejectedTasks: number;
 }
-
 
 interface ProjectDetails {
   project: Project;
@@ -64,8 +63,28 @@ export const ProjectTasksView: React.FC<{
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Add search states
+  const [taskSearchTerm, setTaskSearchTerm] = useState('');
+  const [filteredTasks, setFilteredTasks] = useState<Task[]>(projectDetails.tasks);
+
   const { project, tasks, summary } = projectDetails;
   const myTasks = tasks.filter(t => t.employeeId === currentUserId);
+
+  // Filter tasks based on search
+  useEffect(() => {
+    if (taskSearchTerm) {
+      const filtered = tasks.filter(task =>
+        task.taskName.toLowerCase().includes(taskSearchTerm.toLowerCase()) ||
+        task.employeeName.toLowerCase().includes(taskSearchTerm.toLowerCase()) ||
+        task.employeeEmail.toLowerCase().includes(taskSearchTerm.toLowerCase()) ||
+        (task.description && task.description.toLowerCase().includes(taskSearchTerm.toLowerCase())) ||
+        task.status.toLowerCase().includes(taskSearchTerm.toLowerCase())
+      );
+      setFilteredTasks(filtered);
+    } else {
+      setFilteredTasks(tasks);
+    }
+  }, [taskSearchTerm, tasks]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -75,6 +94,7 @@ export const ProjectTasksView: React.FC<{
       default: return 'bg-gray-100 text-gray-700';
     }
   };
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'approved': return <CheckCircle2 className="w-4 h-4" />;
@@ -83,14 +103,17 @@ export const ProjectTasksView: React.FC<{
       default: return <Clock className="w-4 h-4" />;
     }
   };
+
   const handleEditClick = (task: Task) => {
     setEditingTask(task);
     setShowTaskModal(true);
   };
+
   const handleDeleteClick = (task: Task) => {
     setTaskToDelete(task);
     setShowDeleteModal(true);
   };
+
   const handleDeleteConfirm = async () => {
     if (!taskToDelete) return;
     setIsDeleting(true);
@@ -111,10 +134,12 @@ export const ProjectTasksView: React.FC<{
       setIsDeleting(false);
     }
   };
+
   const handleModalClose = () => {
     setShowTaskModal(false);
     setEditingTask(null);
   };
+
   const handleTaskSuccess = () => {
     onRefresh();
   };
@@ -126,6 +151,7 @@ export const ProjectTasksView: React.FC<{
       </div>
     );
   }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -135,19 +161,33 @@ export const ProjectTasksView: React.FC<{
           className="text-blue-600 hover:text-blue-700 font-medium mb-4 flex items-center gap-2">
           ← Back to Projects
         </button>
+
+        {/* Search and Add Button Row */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+          <div className="flex-1 max-w-md">
+            <SearchBox
+              value={taskSearchTerm}
+              onChange={setTaskSearchTerm}
+              placeholder="Search tasks, employees, or status..."
+              className="w-full"
+            />
+          </div>
+          <button
+            onClick={() => setShowTaskModal(true)}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium whitespace-nowrap">
+            <Plus className="w-4 h-4" />
+            Add Task
+          </button>
+        </div>
+
         <div className="flex justify-between items-start">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">{project.projectName}</h2>
             <p className="text-gray-500 mt-1">{project.description || 'No description'}</p>
           </div>
-          <button
-            onClick={() => setShowTaskModal(true)}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium">
-            <Plus className="w-4 h-4" />
-            Add Task
-          </button>
         </div>
       </div>
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white p-6 rounded-lg border border-gray-200">
@@ -162,6 +202,7 @@ export const ProjectTasksView: React.FC<{
           </p>
         </div>
       </div>
+
       {/* My Tasks Table */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="p-6 border-b border-gray-200">
@@ -174,14 +215,13 @@ export const ProjectTasksView: React.FC<{
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Employee</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Task</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Description</th>
-                {/* <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Expected</th> */}
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Actual</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {tasks.map((task) => (
+              {filteredTasks.map((task) => (
                 <tr key={task.taskId} className="hover:bg-gray-50">
                   <td className="px-6 py-4">
                     <div>
@@ -195,9 +235,6 @@ export const ProjectTasksView: React.FC<{
                   <td className="px-6 py-4 max-w-md">
                     <p className="text-sm text-gray-700">{task.description || 'No description'}</p>
                   </td>
-                  {/* <td className="px-6 py-4 font-semibold text-gray-900">
-                    {parseFloat(task.expectedHours).toFixed(1)}h
-                  </td> */}
                   <td className="px-6 py-4 font-semibold text-gray-900">
                     {parseFloat(task.actualHours).toFixed(1)}h
                   </td>
@@ -214,26 +251,26 @@ export const ProjectTasksView: React.FC<{
                       year: 'numeric'
                     })}
                   </td>
-                  
                 </tr>
               ))}
             </tbody>
           </table>
-          {tasks.length === 0 && (
+          {filteredTasks.length === 0 && (
             <div className="text-center py-12">
-              <p className="text-gray-500">No tasks yet for this project.</p>
+              <p className="text-gray-500">
+                {taskSearchTerm ? 'No tasks found matching your search.' : 'No tasks yet for this project.'}
+              </p>
             </div>
           )}
         </div>
       </div>
+
       <TaskModal
         isOpen={showTaskModal}
         onClose={handleModalClose}
         onSuccess={handleTaskSuccess}
         projectId={project.id}
-        // editTask={editingTask}
       />
- 
     </div>
   );
 };
