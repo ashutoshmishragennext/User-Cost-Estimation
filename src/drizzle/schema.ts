@@ -146,13 +146,63 @@ export const Tasks = pgTable('tasks', {
 }));
 
 
+// Add this new table to your schema.ts
+export const ProjectAssignments = pgTable('project_assignments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  projectId: uuid('project_id').notNull().references(() => Projects.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => UserTable.id, { onDelete: 'cascade' }),
+  assignedBy: uuid('assigned_by').notNull().references(() => UserTable.id),
+  assignedAt: timestamp('assigned_at').defaultNow().notNull(),
+}, (table) => ({
+  projectUserIdx: uniqueIndex('project_user_unique_idx').on(table.projectId, table.userId),
+  projectIdx: index('project_assignment_project_idx').on(table.projectId),
+  userIdx: index('project_assignment_user_idx').on(table.userId),
+}));
+
+// Update ProjectRelations to include assignments
 export const ProjectRelations = relations(Projects, ({ one, many }) => ({
   creator: one(UserTable, {
     fields: [Projects.createdBy],
     references: [UserTable.id],
   }),
   tasks: many(Tasks),
+  assignments: many(ProjectAssignments), // Add this line
 }));
+
+// Add ProjectAssignmentRelations
+export const ProjectAssignmentRelations = relations(ProjectAssignments, ({ one }) => ({
+  project: one(Projects, {
+    fields: [ProjectAssignments.projectId],
+    references: [Projects.id],
+  }),
+  user: one(UserTable, {
+    fields: [ProjectAssignments.userId],
+    references: [UserTable.id],
+    relationName: 'assigned_projects',
+  }),
+  assigner: one(UserTable, {
+    fields: [ProjectAssignments.assignedBy],
+    references: [UserTable.id],
+    relationName: 'assigned_by_user',
+  }),
+}));
+
+// Update UserRelations to include project assignments
+// export const UserRelations = relations(UserTable, ({ many }) => ({
+//   createdProjects: many(Projects),
+//   employeeTasks: many(Tasks, { relationName: 'employee_tasks' }),
+//   approvedTasks: many(Tasks, { relationName: 'approved_tasks' }),
+//   assignedProjects: many(ProjectAssignments, { relationName: 'assigned_projects' }), // Add this
+//   projectsAssignedByMe: many(ProjectAssignments, { relationName: 'assigned_by_user' }), // Add this
+// }));
+
+// export const ProjectRelations = relations(Projects, ({ one, many }) => ({
+//   creator: one(UserTable, {
+//     fields: [Projects.createdBy],
+//     references: [UserTable.id],
+//   }),
+//   tasks: many(Tasks),
+// }));
 
 export const TaskRelations = relations(Tasks, ({ one }) => ({
   project: one(Projects, {
