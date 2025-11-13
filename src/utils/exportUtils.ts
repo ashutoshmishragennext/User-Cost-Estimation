@@ -398,18 +398,12 @@ export const exportSelectedTasksDetailedToExcel = (
       { v: project.projectName, s: styles.projectHeader },
       { v: '', s: styles.projectHeader },
       { v: '', s: styles.projectHeader },
-      { v: '', s: styles.projectHeader },
-      { v: '', s: styles.projectHeader },
-      { v: '', s: styles.projectHeader },
       { v: '', s: styles.projectHeader }
     ]);
     
     // Row 2: Project Description
     ws_data.push([
       { v: project.description || 'No description', s: styles.projectDescription },
-      { v: '', s: styles.projectDescription },
-      { v: '', s: styles.projectDescription },
-      { v: '', s: styles.projectDescription },
       { v: '', s: styles.projectDescription },
       { v: '', s: styles.projectDescription },
       { v: '', s: styles.projectDescription }
@@ -420,21 +414,15 @@ export const exportSelectedTasksDetailedToExcel = (
       { v: '', s: {} },
       { v: '', s: {} },
       { v: '', s: {} },
-      { v: '', s: {} },
-      { v: '', s: {} },
-      { v: '', s: {} },
       { v: '', s: {} }
     ]);
     
-    // Row 4: Column Headers (with more details)
+    // Row 4: Column Headers
     ws_data.push([
       { v: 'Sr. No.', s: styles.columnHeader },
-      { v: 'Employee Name', s: styles.columnHeader },
       { v: 'Task Name', s: styles.columnHeader },
       { v: 'Description', s: styles.columnHeader },
-      { v: 'Expected Hours', s: styles.columnHeader },
-      { v: 'Actual Hours', s: styles.columnHeader },
-      { v: 'Status', s: styles.columnHeader }
+      { v: 'Hours', s: styles.columnHeader }
     ]);
     
     // Task Data Rows
@@ -447,12 +435,9 @@ export const exportSelectedTasksDetailedToExcel = (
       
       ws_data.push([
         { v: index + 1, s: styles.serialCell },
-        { v: task.employeeName, s: rowStyle },
         { v: task.taskName, s: rowStyle },
         { v: task.description || 'No description', s: rowStyle },
-        { v: parseFloat(task.expectedHours).toFixed(2), s: styles.hoursCell },
-        { v: parseFloat(task.actualHours).toFixed(2), s: styles.hoursCell },
-        { v: task.status.toUpperCase(), s: rowStyle }
+        { v: parseFloat(task.expectedHours).toFixed(2), s: styles.hoursCell }
       ]);
     });
 
@@ -460,18 +445,15 @@ export const exportSelectedTasksDetailedToExcel = (
     
     // Merge cells
     if (!ws['!merges']) ws['!merges'] = [];
-    ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }); // Project name
-    ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 6 } }); // Description
+    ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }); // Project name
+    ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 3 } }); // Description
     
     // Set column widths
     ws['!cols'] = [
       { wch: 10 },  // Sr. No.
-      { wch: 25 },  // Employee Name
       { wch: 30 },  // Task Name
-      { wch: 40 },  // Description
-      { wch: 15 },  // Expected Hours
-      { wch: 15 },  // Actual Hours
-      { wch: 12 }   // Status
+      { wch: 50 },  // Description
+      { wch: 15 }   // Hours
     ];
     
     // Set row heights
