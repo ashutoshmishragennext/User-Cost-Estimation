@@ -29,6 +29,7 @@ export const UserRole = pgEnum("user_role", [
 export const TicketStatusEnum = pgEnum('ticket_status', ['open', 'pending', 'resolved', 'closed']);
 export const MessageDirectionEnum = pgEnum('message_direction', ['user_to_admin', 'admin_to_user']);
 export const TaskStatusEnum = pgEnum('task_status', ['pending', 'approved', 'rejected']);
+export const ReviewerTypeEnum = pgEnum('reviewer_type', ['employee', 'admin']);
 
 // =====================
 // Ticket Tables
@@ -105,12 +106,6 @@ export const UserTable = pgTable(
 );
 
 
-// export const UserRelations = relations(UserTable, ({ many }) => ({
-//   createdTickets: many(Tickets, { relationName: 'user_tickets' }),
-//   assignedTickets: many(Tickets, { relationName: 'assigned_admin' }),
-//   sentMessages: many(TicketMessages),
-// }));
-
 export const Projects = pgTable('projects', {
   id: uuid('id').primaryKey().defaultRandom(),
   projectName: varchar('project_name', { length: 255 }).notNull(),
@@ -145,6 +140,32 @@ export const Tasks = pgTable('tasks', {
   approvedByIdx: index('task_approved_by_idx').on(table.approvedBy),
 }));
 
+// =====================
+// Reviews and Ratings Table
+// =====================
+export const TaskReviews = pgTable('task_reviews', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  taskId: uuid('task_id').notNull().references(() => Tasks.id, { onDelete: 'cascade' }),
+  reviewerId: uuid('reviewer_id').notNull().references(() => UserTable.id),
+  reviewerType: ReviewerTypeEnum('reviewer_type').notNull(), // 'employee' or 'admin'
+  rating: integer('rating').notNull(), // 1-5 stars
+  feedback: text('feedback'), // Review comment/feedback by admin
+  reply: text('reply'), // Reply to review by employee
+  repliedAt: timestamp('replied_at'), // When employee replied
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  taskIdx: index('review_task_idx').on(table.taskId),
+  reviewerIdx: index('review_reviewer_idx').on(table.reviewerId),
+  reviewerTypeIdx: index('review_reviewer_type_idx').on(table.reviewerType),
+  ratingIdx: index('review_rating_idx').on(table.rating),
+  // Ensure one review per reviewer per task
+  uniqueTaskReviewer: uniqueIndex('unique_task_reviewer').on(table.taskId, table.reviewerId),
+}));
+
+// =====================
+// Relations
+// =====================
 
 export const ProjectRelations = relations(Projects, ({ one, many }) => ({
   creator: one(UserTable, {
@@ -154,7 +175,7 @@ export const ProjectRelations = relations(Projects, ({ one, many }) => ({
   tasks: many(Tasks),
 }));
 
-export const TaskRelations = relations(Tasks, ({ one }) => ({
+export const TaskRelations = relations(Tasks, ({ one, many }) => ({
   project: one(Projects, {
     fields: [Tasks.projectId],
     references: [Projects.id],
@@ -169,11 +190,24 @@ export const TaskRelations = relations(Tasks, ({ one }) => ({
     references: [UserTable.id],
     relationName: 'approved_tasks',
   }),
+  reviews: many(TaskReviews),
 }));
 
-// Update UserRelations to include projects and tasks
+export const TaskReviewRelations = relations(TaskReviews, ({ one }) => ({
+  task: one(Tasks, {
+    fields: [TaskReviews.taskId],
+    references: [Tasks.id],
+  }),
+  reviewer: one(UserTable, {
+    fields: [TaskReviews.reviewerId],
+    references: [UserTable.id],
+  }),
+}));
+
+// Update UserRelations to include projects, tasks, and reviews
 export const UserRelations = relations(UserTable, ({ many }) => ({
   createdProjects: many(Projects),
   employeeTasks: many(Tasks, { relationName: 'employee_tasks' }),
   approvedTasks: many(Tasks, { relationName: 'approved_tasks' }),
+  givenReviews: many(TaskReviews),
 }));
