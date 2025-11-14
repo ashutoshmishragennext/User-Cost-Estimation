@@ -1,7 +1,9 @@
+'use client'
 import { useEffect, useState } from "react";
 import {TaskModal} from '@/components/user/dashboard/TaskModal';
-import { Plus, Loader2, CheckCircle2, Clock, X } from "lucide-react";
+import { Plus, Loader2, CheckCircle2, Clock, X, Star } from "lucide-react";
 import SearchBox from '@/components/SearchBox';
+import { UserTaskReviewSection } from "./UserTaskReviewSection";
 
 interface Project {
   id: string;
@@ -66,6 +68,9 @@ export const ProjectTasksView: React.FC<{
   // Add search states
   const [taskSearchTerm, setTaskSearchTerm] = useState('');
   const [filteredTasks, setFilteredTasks] = useState<Task[]>(projectDetails.tasks);
+
+  // ✅ Review state
+  const [selectedTaskForReview, setSelectedTaskForReview] = useState<Task | null>(null);
 
   const { project, tasks, summary } = projectDetails;
   const myTasks = tasks.filter(t => t.employeeId === currentUserId);
@@ -144,6 +149,15 @@ export const ProjectTasksView: React.FC<{
     onRefresh();
   };
 
+  // ✅ Review handlers
+  const handleOpenReviews = (task: Task) => {
+    setSelectedTaskForReview(task);
+  };
+
+  const handleCloseReviews = () => {
+    setSelectedTaskForReview(null);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -218,6 +232,7 @@ export const ProjectTasksView: React.FC<{
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Actual</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -251,6 +266,16 @@ export const ProjectTasksView: React.FC<{
                       year: 'numeric'
                     })}
                   </td>
+                  <td className="px-6 py-4">
+                    {/* ✅ Reviews Button */}
+                    <button
+                      onClick={() => handleOpenReviews(task)}
+                      className="text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1 transition-colors"
+                    >
+                      <Star className="w-4 h-4" />
+                      Reviews
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -265,12 +290,27 @@ export const ProjectTasksView: React.FC<{
         </div>
       </div>
 
+      {/* Task Modal */}
       <TaskModal
         isOpen={showTaskModal}
         onClose={handleModalClose}
         onSuccess={handleTaskSuccess}
         projectId={project.id}
       />
+
+      {/* ✅ Review Modal */}
+      {selectedTaskForReview && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="max-w-2xl w-full my-8">
+            <UserTaskReviewSection
+              taskId={selectedTaskForReview.taskId}
+              taskName={selectedTaskForReview.taskName}
+              employeeId={selectedTaskForReview.employeeId}
+              onClose={handleCloseReviews}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
